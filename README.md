@@ -15,6 +15,7 @@ vitess 是YouTube开源的用于MySQL水平扩展的数据库集群系统。其G
 ```
 make
 ```
+注意: 目前在Windows上构建有问题,暂不支持在Windows机器上使用
 
 ## 配置
 
