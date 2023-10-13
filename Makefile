@@ -1,3 +1,6 @@
+.PHONY: all
+all: linux-amd64 linux-arm64 darwin-amd64 darwin-arm64
+
 default:
 	CGO_ENABLED=0 go build -ldflags="-s -w"
 linux-amd64:
