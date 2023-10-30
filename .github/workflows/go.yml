@@ -20,9 +20,11 @@ jobs:
       - name: go mod tidy
         run: go mod tidy
       - name: build
-        run: make all
+        run: make all; exit 1
+
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1
+        if: ${{ failure() }}
       - name: package
         uses: actions/upload-artifact@v3
         with:
