@@ -29,3 +29,6 @@ jobs:
         with:
           name: upload package
           path: build/*
+      - name: debug failure
+        run: echo faild
+        if: ${{ failure() }}
