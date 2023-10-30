@@ -5,23 +5,26 @@ name: build-schema-diff
 
 on:
   push:
-    branches: [ "feature/use-github-action" ]
+    branches:
+      - "feature/use-github-action"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
-    - name: go mod tidy
-      run: go mod tidy
-    - name: build
-      run: make all
-    - name: package
-      uses: actions/upload-artifact@v3
-      with:
-        name: upload package
-        path: build/*
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - name: go mod tidy
+        run: go mod tidy
+      - name: build
+        run: make all
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: package
+        uses: actions/upload-artifact@v3
+        with:
+          name: upload package
+          path: build/*
