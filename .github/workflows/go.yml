@@ -24,6 +24,9 @@ jobs:
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1
         if: ${{ failure() }}
+        with:
+          limit-access-to-actor: true
+          limit-access-to-users: hashdata-build
       - name: package
         uses: actions/upload-artifact@v3
         with:
