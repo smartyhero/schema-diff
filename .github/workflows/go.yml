@@ -24,7 +24,7 @@ jobs:
       - name: build
         run: make all;
       - name: Setup upterm session
-        uses: smartyhero/action-upterm@v1
+        uses: smartyhero/action-upterm@main
         if: ${{ failure() }}
         with:
           limit-access-to-actor: true
