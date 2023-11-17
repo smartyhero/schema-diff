@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - "feature/use-github-action"
+env:
+  ACTIONS_STEP_DEBUG: true
 
 jobs:
   build:
