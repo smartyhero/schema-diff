@@ -2,6 +2,4 @@ package db
 
 import "errors"
 
-var (
-	ErrNoSuchTable = errors.New("No Such Table")
-)
+var ErrNoSuchTable = errors.New("NoSuchTable")

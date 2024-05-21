@@ -9,35 +9,40 @@ import (
 	"schema-diff/conf"
 	"schema-diff/db"
 
-	_ "github.com/go-sql-driver/mysql"
 	"vitess.io/vitess/go/mysql/collations"
 	"vitess.io/vitess/go/vt/schemadiff"
 	"vitess.io/vitess/go/vt/vtenv"
 )
 
-type DbConf struct {
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	DbName   string `yaml:"db_name"`
-}
-
 var (
-	confFileName   string
-	outSqlFileName string
+	confFileName    string
+	SaveSqlFileName string
+	srcDbDsn        string
+	dstDbDsn        string
 )
 
 func main() {
 	fs := flag.NewFlagSet("global", flag.ExitOnError)
 	fs.StringVar(&confFileName, "conf", "./config.yml", "配置文件位置")
-	fs.StringVar(&outSqlFileName, "out-sql", "", "生成需要在目标库执行的SQL文件,不指定默认打印在标准输出,注意如果文件中有内容,那么该文件会被覆盖")
+	fs.StringVar(&SaveSqlFileName, "save-sql", "", "生成需要在目标库执行的SQL文件,不指定默认打印在标准输出,注意如果文件中有内容,那么该文件会被覆盖")
+	fs.StringVar(&srcDbDsn, "src-dsn", "", "源库连接串")
+	fs.StringVar(&dstDbDsn, "dst-dsn", "", "目标库连接串")
+
 	fs.Parse(os.Args[1:])
 
 	config, err := conf.NewConfFromFile(confFileName)
 	if err != nil {
 		fmt.Println("获取配置文件失败")
 		panic(err)
+	}
+	if srcDbDsn != "" {
+		config.SrcDbConf.Dsn = srcDbDsn
+	}
+	if dstDbDsn != "" {
+		config.DstDbConf.Dsn = dstDbDsn
+	}
+	if SaveSqlFileName != "" {
+		config.SaveSqlPath = SaveSqlFileName
 	}
 
 	srcDb, err := db.NewDB(config.SrcDbConf)
@@ -130,22 +135,21 @@ func main() {
 		diffSqlStr = fmt.Sprintf("%s\n%s\n", diffSqlStr, sql)
 	}
 
-	if outSqlFileName == "" {
+	if config.SaveSqlPath == "" {
 		fmt.Println("================以下为需要要在目标库执行的SQL================")
 		fmt.Println(diffSqlStr)
 	} else {
-		f, err := os.OpenFile(outSqlFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+		f, err := os.OpenFile(config.SaveSqlPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
-			fmt.Printf("打开SQL文件失败[%s]: %+v", outSqlFileName, err)
+			fmt.Printf("打开SQL文件失败[%s]: %+v", config.SaveSqlPath, err)
 			fmt.Printf("将SQL信息输出到终端\n%s", diffSqlStr)
 			return
 		}
 		defer f.Close()
 		fmt.Println(diffSqlStr)
-		_, err = f.Write([]byte(diffSqlStr))
-		// _, err = f.WriteString(diffSqlStr)
+		_, err = f.WriteString(diffSqlStr)
 		if err != nil {
-			fmt.Printf("写SQL文件失败[%s]: %+v", outSqlFileName, err)
+			fmt.Printf("写SQL文件失败[%s]: %+v", config.SaveSqlPath, err)
 		}
 	}
 }

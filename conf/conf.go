@@ -1,17 +1,13 @@
 package conf
 
 import (
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
 type DbConf struct {
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	DbName   string `yaml:"db_name"`
+	Dsn string `yaml:"dsn"`
 }
 
 type DiffConf struct {
@@ -20,17 +16,18 @@ type DiffConf struct {
 }
 
 type Conf struct {
-	SrcDbConf *DbConf   `yaml:"src_db"`
-	DstDbConf *DbConf   `yaml:"dst_db"`
-	DiffConf  *DiffConf `yaml:"diff_conf"`
+	SrcDbConf   *DbConf   `yaml:"src_db"`
+	DstDbConf   *DbConf   `yaml:"dst_db"`
+	DiffConf    *DiffConf `yaml:"diff_conf"`
+	SaveSqlPath string    `yaml:"save_sql_path"`
 }
 
 func NewConfFromFile(fileName string) (*Conf, error) {
-	f, err := ioutil.ReadFile(fileName)
+	f, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
-	return NewConf(f)
+	return NewConf([]byte(os.ExpandEnv(string(f))))
 }
 
 func NewConf(confStr []byte) (*Conf, error) {
@@ -40,12 +37,4 @@ func NewConf(confStr []byte) (*Conf, error) {
 		return nil, err
 	}
 	return conf, nil
-}
-
-func ReadFileToStr(file string) (string, error) {
-	f, err := ioutil.ReadFile(file)
-	if err != nil {
-		return "", err
-	}
-	return string(f), nil
 }

@@ -1,15 +1,8 @@
 src_db:
-  user: root
-  password: 123456
-  host: 172.16.0.99
-  port: 3306
-  db_name: schema_diff_1
+  dsn: "root:123456789@tcp(127.0.0.1:3306)/tmp?charset=utf8mb4&parseTime=True"
 dst_db:
-  user: root
-  password: 123456
-  host: 172.16.0.99
-  port: 3306
-  db_name: schema_diff_2
+  dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True"
 diff_conf:
   ignore_character: false
-  ignore_auto_increment: false
+  ignore_auto_increment: true
+save_sql_path: ./xxx.sql

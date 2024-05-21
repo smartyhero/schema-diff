@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 
 	"schema-diff/conf"
@@ -24,47 +23,31 @@ type SchemaRes struct {
 	CreateStmt string `gorm:"column:Create Table"`
 }
 
+// type Db struct {
+// 	*gorm.DB
+// }
+
 type Db struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	DbName   string
-	gormDb   *gorm.DB
+	*gorm.DB
 }
 
 func NewDB(conf *conf.DbConf) (*Db, error) {
-	Db := &Db{
-		User:     conf.User,
-		Password: conf.Password,
-		Host:     conf.Host,
-		Port:     conf.Port,
-		DbName:   conf.DbName,
-	}
-	mysqlDsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True", conf.User, conf.Password, conf.Host,
-		conf.Port, conf.DbName)
-
-	sqlDB, err := sql.Open("mysql", mysqlDsn)
-	sqlDB.SetMaxOpenConns(64)
-	if err != nil {
-		return nil, err
-	}
-	err = sqlDB.Ping()
+	goDB, err := gorm.Open(mysql.Open(conf.Dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		return nil, err
 	}
 
-	goDB, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	db, err := goDB.DB()
 	if err != nil {
 		return nil, err
 	}
-	Db.gormDb = goDB
-	return Db, nil
+	db.SetMaxOpenConns(64)
+	return &Db{goDB}, nil
 }
 
 func (db *Db) GetAllTables() ([]string, error) {
 	tableName := []string{}
-	tx := db.gormDb.Raw("show tables").Scan(&tableName)
+	tx := db.Raw("show tables").Scan(&tableName)
 	if tx.Error != nil {
 		return tableName, tx.Error
 	}
@@ -72,14 +55,14 @@ func (db *Db) GetAllTables() ([]string, error) {
 }
 
 func (db *Db) GetTableSchema(tableName string) (string, error) {
-	migrator := db.gormDb.Migrator()
+	migrator := db.Migrator()
 
 	if !migrator.HasTable(tableName) {
 		return "", ErrNoSuchTable
 	}
 
 	Schema := &SchemaRes{}
-	tx := db.gormDb.Raw(fmt.Sprintf("show create table `%s`", tableName)).Scan(Schema)
+	tx := db.Raw(fmt.Sprintf("show create table `%s`", tableName)).Scan(Schema)
 	if tx.Error != nil {
 		return "", tx.Error
 	}
@@ -88,7 +71,7 @@ func (db *Db) GetTableSchema(tableName string) (string, error) {
 
 func (db *Db) GetMysqlVersion() (string, error) {
 	var version string
-	tx := db.gormDb.Raw("SELECT VERSION()").Scan(&version)
+	tx := db.Raw("SELECT VERSION()").Scan(&version)
 	if tx.Error != nil {
 		return "", tx.Error
 	}
