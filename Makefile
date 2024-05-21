@@ -1,18 +1,16 @@
-default:
+build:
 	CGO_ENABLED=0 go build -ldflags="-s -w"
-linux-amd64:
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags="-s -w" -o build/schem-diff-linux-amd64
-linux-arm64:
-	CGO_ENABLED=0 GOARCH=arm64 GOOS=linux go build -ldflags="-s -w" -o build/schem-diff-linux-arm64
-darwin-amd64:
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin go build -ldflags="-s -w" -o build/schem-diff-darwin-amd64
-darwin-arm64:
-	CGO_ENABLED=0 GOARCH=arm64 GOOS=darwin go build -ldflags="-s -w" -o build/schem-diff-darwin-arm64
-windows-amd64::
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=windows go build -ldflags="-s -w" -o build/schem-diff-windows-amd64
-windows-arm64::
-	CGO_ENABLED=0 GOARCH=arm64 GOOS=windows go build -ldflags="-s -w" -o build/schem-diff-windows-arm64
-all: linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64 windows-arm64
+
+build-use-env:
+	CGO_ENABLED=0 go build -ldflags="-s -w" -o build/schema-diff-${GOOS}-${GOARCH}
+
+all:
+	make GOARCH=amd64 GOOS=linux build-use-env
+	make GOARCH=arm64 GOOS=linux build-use-env
+	make GOARCH=amd64 GOOS=darwin build-use-env
+	make GOARCH=arm64 GOOS=darwin build-use-env
+	make GOARCH=amd64 GOOS=windows build-use-env
+	make GOARCH=arm64 GOOS=windows build-use-env
 
 clean:
 	rm -rf build
