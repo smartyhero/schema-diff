@@ -5,11 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
 	"schema-diff/conf"
 	"schema-diff/db"
 
 	_ "github.com/go-sql-driver/mysql"
+	"vitess.io/vitess/go/mysql/collations"
 	"vitess.io/vitess/go/vt/schemadiff"
+	"vitess.io/vitess/go/vt/vtenv"
 )
 
 type DbConf struct {
@@ -65,6 +68,23 @@ func main() {
 		diffHints.TableCharsetCollateStrategy = schemadiff.TableCharsetCollateIgnoreAlways
 	}
 
+	srcMysqlVersion, err := srcDb.GetMysqlVersion()
+	if err != nil {
+		fmt.Println("获取源库版本失败")
+		panic(err)
+	}
+
+	srcOpt := vtenv.Options{
+		MySQLServerVersion: srcMysqlVersion,
+	}
+
+	srcEnv, err := vtenv.New(srcOpt)
+	if err != nil {
+		panic(err)
+	}
+	collationID := collations.NewEnvironment(srcMysqlVersion).DefaultConnectionCharset()
+	schemadiffEnv := schemadiff.NewEnv(srcEnv, collationID)
+
 	alterTableSql := []string{}
 
 	for _, tableName := range srcTables {
@@ -85,7 +105,7 @@ func main() {
 			continue
 		}
 
-		diff, err := schemadiff.DiffCreateTablesQueries(dstSchema, srcSchema, diffHints)
+		diff, err := schemadiff.DiffCreateTablesQueries(schemadiffEnv, dstSchema, srcSchema, diffHints)
 		if err != nil {
 			fmt.Printf("对比表结构失败[%s]\n", tableName)
 			continue
@@ -114,7 +134,7 @@ func main() {
 		fmt.Println("================以下为需要要在目标库执行的SQL================")
 		fmt.Println(diffSqlStr)
 	} else {
-		f, err := os.OpenFile(outSqlFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		f, err := os.OpenFile(outSqlFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
 			fmt.Printf("打开SQL文件失败[%s]: %+v", outSqlFileName, err)
 			fmt.Printf("将SQL信息输出到终端\n%s", diffSqlStr)
