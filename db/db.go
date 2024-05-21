@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+
 	"schema-diff/conf"
 
 	"gorm.io/driver/mysql"
@@ -83,4 +84,13 @@ func (db *Db) GetTableSchema(tableName string) (string, error) {
 		return "", tx.Error
 	}
 	return Schema.CreateStmt, nil
+}
+
+func (db *Db) GetMysqlVersion() (string, error) {
+	var version string
+	tx := db.gormDb.Raw("SELECT VERSION()").Scan(&version)
+	if tx.Error != nil {
+		return "", tx.Error
+	}
+	return version, nil
 }
