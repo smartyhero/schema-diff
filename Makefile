@@ -8,3 +8,12 @@ darwin-amd64:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin go build -ldflags="-s -w" -o build/schem-diff-darwin-amd64
 darwin-arm64:
 	CGO_ENABLED=0 GOARCH=arm64 GOOS=darwin go build -ldflags="-s -w" -o build/schem-diff-darwin-arm64
+windows-amd64::
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=windows go build -ldflags="-s -w" -o build/schem-diff-windows-amd64
+windows-arm64::
+	CGO_ENABLED=0 GOARCH=arm64 GOOS=windows go build -ldflags="-s -w" -o build/schem-diff-windows-arm64
+all: linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64 windows-arm64
+
+clean:
+	rm -rf build
+	rm -rf ./schema-diff
