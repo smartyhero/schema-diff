@@ -29,7 +29,6 @@ func GetSchemas(schemaConf *conf.SchemaConf) (schemas map[string]string, err err
 	return nil, conf.ErrUnknownSchemaSource
 }
 
-// TODO: 跳过特定表比对
 func DiffSchemas(MysqlVersion string, srcSchemas map[string]string, dstSchemas map[string]string) (diffs []string, err error) {
 	if len(srcSchemas) == 0 && len(dstSchemas) == 0 {
 		log.Println("源库和目标库Schema都为空，无法进行对比")
@@ -44,7 +43,7 @@ func DiffSchemas(MysqlVersion string, srcSchemas map[string]string, dstSchemas m
 	if err != nil {
 		return nil, err
 	}
-
+	// TODO: 增加配置, ignore_charset_diff
 	diffHints := &schemadiff.DiffHints{
 		StrictIndexOrdering:         false,
 		AutoIncrementStrategy:       schemadiff.AutoIncrementIgnore,

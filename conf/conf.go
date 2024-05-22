@@ -2,6 +2,7 @@ package conf
 
 import (
 	"os"
+	"strings"
 
 	"schema-diff/db"
 
@@ -32,6 +33,7 @@ type Conf struct {
 	SrcSchemaConf *SchemaConf `yaml:"src_schema"`
 	DstSchemaConf *SchemaConf `yaml:"dst_schema"`
 	SaveSqlPath   string      `yaml:"save_sql_path"`
+	SkipTables    []string    `yaml:"skip_tables"`
 }
 
 func NewConfFromFile(fileName string) (*Conf, error) {
@@ -51,7 +53,7 @@ func NewConf(confStr []byte) (*Conf, error) {
 	return conf, nil
 }
 
-func (conf *Conf) InitAndCheck(cmdVarVersion string) error {
+func (conf *Conf) InitAndCheck(cmdVarVersion string, skipTables string) error {
 	if conf.SrcSchemaConf.Dsn == "" && conf.SrcSchemaConf.SqlFile == "" {
 		return ErrConfigSrcMiss
 	}
@@ -83,7 +85,9 @@ func (conf *Conf) InitAndCheck(cmdVarVersion string) error {
 	if err := conf.DstSchemaConf.initMysqlVersion(cmdVarVersion); err != nil {
 		return err
 	}
-
+	if skipTables != "" {
+		conf.SkipTables = strings.Split(skipTables, ",")
+	}
 	return nil
 }
 

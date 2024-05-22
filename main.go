@@ -20,6 +20,7 @@ var (
 	srcSqlFile      string
 	dstSqlFile      string
 	MysqlVersion    string
+	skipTables      string
 	config          *conf.Conf
 )
 
@@ -32,6 +33,7 @@ func init() {
 	fs.StringVar(&srcSqlFile, "src-sql-file", "", "源库SQL文件")
 	fs.StringVar(&dstSqlFile, "dst-sql-file", "", "目标库SQL文件")
 	fs.StringVar(&MysqlVersion, "mysql-version", "", "mysql版本,仅使用文件比对时需要指定,默认值为:"+vtconfig.DefaultMySQLVersion)
+	fs.StringVar(&skipTables, "skip-tables", "", "跳过特定表比对,多个表使用逗号分隔")
 
 	fs.Parse(os.Args[1:])
 
@@ -59,8 +61,8 @@ func init() {
 		config.DstSchemaConf.SqlFile = dstSqlFile
 	}
 
-	if err := config.InitAndCheck(MysqlVersion); err != nil {
-		log.Println("配置有误")
+	if err := config.InitAndCheck(MysqlVersion, skipTables); err != nil {
+		log.Printf("初始化配置失败: %+v\n", err)
 		os.Exit(1)
 	}
 }
@@ -85,6 +87,11 @@ func main() {
 	if err != nil {
 		log.Printf("获取目标库schema失败: %+v\n", err)
 		os.Exit(1)
+	}
+
+	for _, tableName := range config.SkipTables {
+		log.Printf("表[%s]被跳过\n", tableName)
+		delete(srcSchemas, tableName)
 	}
 
 	diffUseMysqlVersion := config.GetDiffUseVersion()
