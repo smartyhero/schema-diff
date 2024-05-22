@@ -1,6 +1,9 @@
 src_schema:
-  sql_file: "../sql/src_schema.sql"
+  sql_file: "./example/src_schema.sql"
   dsn: "root:123456789@tcp(127.0.0.1:3306)/tmp?charset=utf8mb4&parseTime=True"
 dst_schema:
+  sql_file: "./example/dst_schema.sql"
   dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True"
 save_sql_path: ./xxx.sql
+skip_tables:
+  - departments
