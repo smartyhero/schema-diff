@@ -7,3 +7,4 @@ dst_schema:
 save_sql_path: ./xxx.sql
 skip_tables:
   - departments
+ignore_charset: false

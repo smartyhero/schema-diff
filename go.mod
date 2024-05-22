@@ -3,7 +3,6 @@ module schema-diff
 go 1.22.3
 
 require (
-	github.com/go-sql-driver/mysql v1.7.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.5.6
 	gorm.io/gorm v1.25.10
@@ -13,6 +12,7 @@ require (
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect

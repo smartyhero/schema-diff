@@ -34,6 +34,7 @@ type Conf struct {
 	DstSchemaConf *SchemaConf `yaml:"dst_schema"`
 	SaveSqlPath   string      `yaml:"save_sql_path"`
 	SkipTables    []string    `yaml:"skip_tables"`
+	IgnoreCharset bool        `yaml:"ignore_charset"`
 }
 
 func NewConfFromFile(fileName string) (*Conf, error) {

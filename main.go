@@ -21,6 +21,7 @@ var (
 	dstSqlFile      string
 	MysqlVersion    string
 	skipTables      string
+	IgnoreCharset   bool
 	config          *conf.Conf
 )
 
@@ -34,6 +35,7 @@ func init() {
 	fs.StringVar(&dstSqlFile, "dst-sql-file", "", "目标库SQL文件")
 	fs.StringVar(&MysqlVersion, "mysql-version", "", "mysql版本,仅使用文件比对时需要指定,默认值为:"+vtconfig.DefaultMySQLVersion)
 	fs.StringVar(&skipTables, "skip-tables", "", "跳过特定表比对,多个表使用逗号分隔")
+	fs.BoolVar(&IgnoreCharset, "ignore-charset", false, "忽略字符集比对")
 
 	fs.Parse(os.Args[1:])
 
@@ -95,7 +97,7 @@ func main() {
 	}
 
 	diffUseMysqlVersion := config.GetDiffUseVersion()
-	alterTableSql, err := diffsql.DiffSchemas(diffUseMysqlVersion, srcSchemas, dstSchemas)
+	alterTableSql, err := diffsql.DiffSchemas(diffUseMysqlVersion, IgnoreCharset, srcSchemas, dstSchemas)
 	if err != nil {
 		log.Printf("比对失败: %+v\n", err)
 		os.Exit(1)

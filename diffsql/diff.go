@@ -29,7 +29,7 @@ func GetSchemas(schemaConf *conf.SchemaConf) (schemas map[string]string, err err
 	return nil, conf.ErrUnknownSchemaSource
 }
 
-func DiffSchemas(MysqlVersion string, srcSchemas map[string]string, dstSchemas map[string]string) (diffs []string, err error) {
+func DiffSchemas(MysqlVersion string, IgnoreCharset bool, srcSchemas map[string]string, dstSchemas map[string]string) (diffs []string, err error) {
 	if len(srcSchemas) == 0 && len(dstSchemas) == 0 {
 		log.Println("源库和目标库Schema都为空，无法进行对比")
 		return diffs, db.ErrSrcDstSchemaIsNull
@@ -43,11 +43,14 @@ func DiffSchemas(MysqlVersion string, srcSchemas map[string]string, dstSchemas m
 	if err != nil {
 		return nil, err
 	}
-	// TODO: 增加配置, ignore_charset_diff
+
 	diffHints := &schemadiff.DiffHints{
 		StrictIndexOrdering:         false,
 		AutoIncrementStrategy:       schemadiff.AutoIncrementIgnore,
 		TableCharsetCollateStrategy: schemadiff.TableCharsetCollateIgnoreAlways,
+	}
+	if IgnoreCharset {
+		diffHints.TableCharsetCollateStrategy = schemadiff.TableCharsetCollateIgnoreAlways
 	}
 
 	collationID := collations.NewEnvironment(MysqlVersion).DefaultConnectionCharset()
