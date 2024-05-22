@@ -23,30 +23,38 @@ make
 ## 配置
 
 ```yaml
-src_db: # 基于这里配置的db进行比对
+src_schema:
+  sql_file: "./example/src_schema.sql"
   dsn: "root:123456789@tcp(127.0.0.1:3306)/tmp?charset=utf8mb4&parseTime=True"
-dst_db:
-  dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True" 
-diff_conf: # 比对的行为配置
-  ignore_character: false  # 忽略字符集
-  ignore_auto_increment: true # 忽略auto_increment
+dst_schema:
+  sql_file: "./example/dst_schema.sql"
+  dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True"
 save_sql_path: ./xxx.sql
+skip_tables:
+  - departments
+ignore_charset: false
+
 ```
 
 配置中支持环境变量, 以下写法, `${SAVE_SQL_PATH}`会被解析成真实的值,(通过`os.ExpandEnv()`实现)
 
 ```yaml
-src_db: # 基于这里配置的db进行比对
+src_schema:
+  sql_file: "./example/src_schema.sql"
   dsn: "root:123456789@tcp(127.0.0.1:3306)/tmp?charset=utf8mb4&parseTime=True"
-dst_db:
-  dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True" 
-diff_conf: # 比对的行为配置
-  ignore_character: false  # 忽略字符集
-  ignore_auto_increment: true # 忽略auto_increment
+dst_schema:
+  sql_file: "./example/dst_schema.sql"
+  dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True"
 save_sql_path: ${SAVE_SQL_PATH}
+skip_tables:
+  - departments
+ignore_charset: false
+
 ```
 
 ## 使用
+
+0. 命令行参数优先级高于配置文件, sql文件优先级高于数据库
 
 1. 执行比对
 ```
@@ -59,7 +67,7 @@ save_sql_path: ${SAVE_SQL_PATH}
 ./schema-diff -conf ./config.yaml -save-sql xxx.sql
 ```
 
-3. 指定连接串, -src-dsn等参数优先级高于配置文件
+1. 指定连接串
 ```
 ./schema-diff -conf ./config.yaml -src-dsn "root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"
 ```
