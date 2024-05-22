@@ -1,8 +1,6 @@
-src_db:
+src_schema:
+  sql_file: "../sql/src_schema.sql"
   dsn: "root:123456789@tcp(127.0.0.1:3306)/tmp?charset=utf8mb4&parseTime=True"
-dst_db:
+dst_schema:
   dsn: "root:123456789@tcp(127.0.0.1:3306)/bill_analysis?charset=utf8mb4&parseTime=True"
-diff_conf:
-  ignore_character: false
-  ignore_auto_increment: true
 save_sql_path: ./xxx.sql

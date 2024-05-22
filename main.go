@@ -1,17 +1,15 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"schema-diff/conf"
-	"schema-diff/db"
+	"schema-diff/diffsql"
 
-	"vitess.io/vitess/go/mysql/collations"
-	"vitess.io/vitess/go/vt/schemadiff"
-	"vitess.io/vitess/go/vt/vtenv"
+	vtconfig "vitess.io/vitess/go/mysql/config"
 )
 
 var (
@@ -19,137 +17,107 @@ var (
 	SaveSqlFileName string
 	srcDbDsn        string
 	dstDbDsn        string
+	srcSqlFile      string
+	dstSqlFile      string
+	MysqlVersion    string
+	config          *conf.Conf
 )
 
-func main() {
+func init() {
 	fs := flag.NewFlagSet("global", flag.ExitOnError)
 	fs.StringVar(&confFileName, "conf", "./config.yml", "配置文件位置")
 	fs.StringVar(&SaveSqlFileName, "save-sql", "", "生成需要在目标库执行的SQL文件,不指定默认打印在标准输出,注意如果文件中有内容,那么该文件会被覆盖")
 	fs.StringVar(&srcDbDsn, "src-dsn", "", "源库连接串")
 	fs.StringVar(&dstDbDsn, "dst-dsn", "", "目标库连接串")
+	fs.StringVar(&srcSqlFile, "src-sql-file", "", "源库SQL文件")
+	fs.StringVar(&dstSqlFile, "dst-sql-file", "", "目标库SQL文件")
+	fs.StringVar(&MysqlVersion, "mysql-version", "", "mysql版本,仅使用文件比对时需要指定,默认值为:"+vtconfig.DefaultMySQLVersion)
 
 	fs.Parse(os.Args[1:])
 
-	config, err := conf.NewConfFromFile(confFileName)
+	var err error
+
+	config, err = conf.NewConfFromFile(confFileName)
 	if err != nil {
-		fmt.Println("获取配置文件失败")
-		panic(err)
+		log.Println("获取配置文件失败")
+		os.Exit(1)
 	}
+	// 优先使用命令行参数
 	if srcDbDsn != "" {
-		config.SrcDbConf.Dsn = srcDbDsn
+		config.SrcSchemaConf.Dsn = srcDbDsn
 	}
 	if dstDbDsn != "" {
-		config.DstDbConf.Dsn = dstDbDsn
+		config.DstSchemaConf.Dsn = dstDbDsn
 	}
 	if SaveSqlFileName != "" {
 		config.SaveSqlPath = SaveSqlFileName
 	}
-
-	srcDb, err := db.NewDB(config.SrcDbConf)
-	if err != nil {
-		fmt.Println("源库连接失败")
-		panic(err)
+	if srcSqlFile != "" {
+		config.SrcSchemaConf.SqlFile = srcSqlFile
+	}
+	if dstSqlFile != "" {
+		config.DstSchemaConf.SqlFile = dstSqlFile
 	}
 
-	dstDb, err := db.NewDB(config.DstDbConf)
-	if err != nil {
-		fmt.Println("目标库连接失败")
-		panic(err)
+	if err := config.InitAndCheck(MysqlVersion); err != nil {
+		log.Println("配置有误")
+		os.Exit(1)
 	}
+}
 
-	srcTables, err := srcDb.GetAllTables()
-	if err != nil {
-		fmt.Println("获取源库所有表失败")
-		panic(err)
-	}
-
-	diffHints := &schemadiff.DiffHints{
-		StrictIndexOrdering: false,
-	}
-	if config.DiffConf.IgnoreAutoIncrement {
-		diffHints.AutoIncrementStrategy = schemadiff.AutoIncrementIgnore
-	}
-	if config.DiffConf.IgnoreCharacter {
-		diffHints.TableCharsetCollateStrategy = schemadiff.TableCharsetCollateIgnoreAlways
-	}
-
-	srcMysqlVersion, err := srcDb.GetMysqlVersion()
-	if err != nil {
-		fmt.Println("获取源库版本失败")
-		panic(err)
-	}
-
-	srcOpt := vtenv.Options{
-		MySQLServerVersion: srcMysqlVersion,
-	}
-
-	srcEnv, err := vtenv.New(srcOpt)
-	if err != nil {
-		panic(err)
-	}
-	collationID := collations.NewEnvironment(srcMysqlVersion).DefaultConnectionCharset()
-	schemadiffEnv := schemadiff.NewEnv(srcEnv, collationID)
-
-	alterTableSql := []string{}
-
-	for _, tableName := range srcTables {
-		srcSchema, err := srcDb.GetTableSchema(tableName)
-		if err != nil {
-			fmt.Printf("获取源表schema失败[%s]错误信息: %v\n", tableName, err)
-			continue
+func main() {
+	// 比对数据库版本
+	if config.SrcSchemaConf.Source == conf.SOURCEISSERVER && config.DstSchemaConf.Source == conf.SOURCEISSERVER {
+		srcVersion := config.SrcSchemaConf.MysqlVersion
+		dstVersion := config.DstSchemaConf.MysqlVersion
+		if srcVersion != dstVersion {
+			log.Printf("注意: 源MySQL库版本为:[%s],目标MySQL库版本为:[%s]\n", srcVersion, dstVersion)
 		}
+	}
+	// 获取源库schema
+	srcSchemas, err := diffsql.GetSchemas(config.SrcSchemaConf)
+	if err != nil {
+		log.Printf("获取源库schema失败: %+v\n", err)
+		os.Exit(1)
+	}
+	// 获取目标库schema
+	dstSchemas, err := diffsql.GetSchemas(config.DstSchemaConf)
+	if err != nil {
+		log.Printf("获取目标库schema失败: %+v\n", err)
+		os.Exit(1)
+	}
 
-		dstSchema, err := dstDb.GetTableSchema(tableName)
-		if err != nil {
-			if errors.Is(err, db.ErrNoSuchTable) {
-				fmt.Printf("目标库中不存在[%s]表\n", tableName)
-				alterTableSql = append(alterTableSql, srcSchema+";")
-			} else {
-				fmt.Printf("获取目标表schema失败[%s]错误信息: %v\n", tableName, err.Error())
-			}
-			continue
-		}
-
-		diff, err := schemadiff.DiffCreateTablesQueries(schemadiffEnv, dstSchema, srcSchema, diffHints)
-		if err != nil {
-			fmt.Printf("对比表结构失败[%s]\n", tableName)
-			continue
-		}
-		if diff.IsEmpty() {
-			fmt.Printf("源库和目标库表结构一致[%s]\n", tableName)
-			continue
-		} else {
-			fmt.Printf("源库和目标库表结构不一致[%s]\n", tableName)
-			alterTableSql = append(alterTableSql, diff.StatementString()+";")
-		}
+	diffUseMysqlVersion := config.GetDiffUseVersion()
+	alterTableSql, err := diffsql.DiffSchemas(diffUseMysqlVersion, srcSchemas, dstSchemas)
+	if err != nil {
+		log.Printf("比对失败: %+v\n", err)
+		os.Exit(1)
 	}
 
 	if len(alterTableSql) == 0 {
-		fmt.Println("两个库的schema完全一致")
+		log.Println("比对完成, 两个库的schema完全一致")
 		return
 	}
 
-	diffSqlStr := ""
-
-	for _, sql := range alterTableSql {
-		diffSqlStr = fmt.Sprintf("%s\n%s\n", diffSqlStr, sql)
-	}
+	diffSqlStr := diffsql.GenerateDiffSQL(alterTableSql)
 
 	if config.SaveSqlPath == "" {
 		fmt.Println("================以下为需要要在目标库执行的SQL================")
 		fmt.Println(diffSqlStr)
+		return
+	}
+
+	f, err := os.OpenFile(config.SaveSqlPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		log.Printf("打开diff结果SQL文件失败[%s]: %+v", config.SaveSqlPath, err)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(diffSqlStr)
+	if err != nil {
+		log.Printf("diff结果SQL文件写入失败失败[%s]: %+v", config.SaveSqlPath, err)
 	} else {
-		f, err := os.OpenFile(config.SaveSqlPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-		if err != nil {
-			fmt.Printf("打开SQL文件失败[%s]: %+v", config.SaveSqlPath, err)
-			fmt.Printf("将SQL信息输出到终端\n%s", diffSqlStr)
-			return
-		}
-		defer f.Close()
-		fmt.Println(diffSqlStr)
-		_, err = f.WriteString(diffSqlStr)
-		if err != nil {
-			fmt.Printf("写SQL文件失败[%s]: %+v", config.SaveSqlPath, err)
-		}
+		log.Printf("diff结果SQL文件生成成功[%s]", config.SaveSqlPath)
 	}
 }

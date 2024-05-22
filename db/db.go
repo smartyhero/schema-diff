@@ -3,8 +3,6 @@ package db
 import (
 	"fmt"
 
-	"schema-diff/conf"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -31,8 +29,8 @@ type Db struct {
 	*gorm.DB
 }
 
-func NewDB(conf *conf.DbConf) (*Db, error) {
-	goDB, err := gorm.Open(mysql.Open(conf.Dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+func NewDB(dsn string) (*Db, error) {
+	goDB, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		return nil, err
 	}
@@ -76,4 +74,20 @@ func (db *Db) GetMysqlVersion() (string, error) {
 		return "", tx.Error
 	}
 	return version, nil
+}
+
+func (db *Db) GetAllTableSchema() (map[string]string, error) {
+	tableName, err := db.GetAllTables()
+	if err != nil {
+		return nil, err
+	}
+	tableSchema := make(map[string]string)
+	for _, table := range tableName {
+		schema, err := db.GetTableSchema(table)
+		if err != nil {
+			return nil, err
+		}
+		tableSchema[table] = schema
+	}
+	return tableSchema, nil
 }
