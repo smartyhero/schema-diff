@@ -1,6 +1,7 @@
 package main
 
 import (
+	"debug/buildinfo"
 	"flag"
 	"fmt"
 	"log"
@@ -23,6 +24,9 @@ var (
 	skipTables      string
 	IgnoreCharset   bool
 	config          *conf.Conf
+	PrintVersion    bool
+	Version         string
+	BuildTime       string
 )
 
 func init() {
@@ -36,8 +40,14 @@ func init() {
 	fs.StringVar(&MysqlVersion, "mysql-version", "", "mysql版本,仅使用文件比对时需要指定,默认值为:"+vtconfig.DefaultMySQLVersion)
 	fs.StringVar(&skipTables, "skip-tables", "", "跳过特定表比对,多个表使用逗号分隔")
 	fs.BoolVar(&IgnoreCharset, "ignore-charset", false, "忽略字符集比对")
+	fs.BoolVar(&PrintVersion, "version", false, "打印版本信息")
 
 	fs.Parse(os.Args[1:])
+
+	if PrintVersion {
+		printVersion()
+		os.Exit(0)
+	}
 
 	var err error
 
@@ -128,5 +138,36 @@ func main() {
 		log.Printf("diff结果SQL文件写入失败失败[%s]: %+v", config.SaveSqlPath, err)
 	} else {
 		log.Printf("diff结果SQL文件生成成功[%s]", config.SaveSqlPath)
+	}
+}
+
+func printVersion() {
+	if Version == "" {
+		Version = "dev"
+	}
+	fmt.Printf("version: \t%s\n", Version)
+	if BuildTime == "" {
+		BuildTime = "unknown"
+	}
+	fmt.Printf("构建时间: \t%s\n", BuildTime)
+
+	selfFile := os.Args[0]
+	res, err := buildinfo.ReadFile(selfFile)
+	if err != nil {
+		os.Exit(0)
+	}
+
+	fmt.Printf("Go版本: \t%s\n", res.GoVersion)
+
+	for _, item := range res.Settings {
+		if item.Key == "vcs.revision" {
+			fmt.Printf("commit id: \t%s\n", item.Value)
+		}
+		if item.Key == "vcs.time" {
+			fmt.Printf("commit time: \t%s\n", item.Value)
+		}
+		if item.Key == "vcs.modified" {
+			fmt.Printf("dirty: \t\t%s\n", item.Value)
+		}
 	}
 }
