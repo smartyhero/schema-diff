@@ -1,6 +1,7 @@
 package diffsql
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -56,22 +57,35 @@ func DiffSchemas(MysqlVersion string, IgnoreCharset bool, srcSchemas map[string]
 	collationID := collations.NewEnvironment(MysqlVersion).DefaultConnectionCharset()
 	schemadiffEnv := schemadiff.NewEnv(srcEnv, collationID)
 
-	for tableName, schema := range srcSchemas {
-		dstSchema, ok := dstSchemas[tableName]
-		if !ok {
-			log.Printf("目标库中不存在[%s]表\n", tableName)
-		}
-		diff, err := schemadiff.DiffCreateTablesQueries(schemadiffEnv, dstSchema, schema, diffHints)
-		if err != nil {
-			log.Printf("对比表结构失败[%s]\n", tableName)
-			return diffs, err
-		}
-		if diff.IsEmpty() {
-			log.Printf("源库和目标库表结构一致[%s]\n", tableName)
-		} else {
-			log.Printf("源库和目标库表结构不一致[%s]\n", tableName)
-			diffs = append(diffs, diff.StatementString())
-		}
+	srcSchemaStr := ""
+	dstSchemaStr := ""
+
+	for _, schema := range srcSchemas {
+		srcSchemaStr += schema + ";\n"
+	}
+	for _, schema := range dstSchemas {
+		dstSchemaStr += schema + ";\n"
+	}
+
+	diffRsult, err := schemadiff.DiffSchemasSQL(schemadiffEnv, dstSchemaStr, srcSchemaStr, diffHints)
+	if err != nil {
+		return nil, errors.Join(ErrDiffFailed, err)
+	}
+	if diffRsult.Empty() {
+		return nil, nil
+	}
+	for _, diff := range diffRsult.UnorderedDiffs() {
+		diffs = append(diffs, diff.StatementString())
+	}
+
+	schema, err := schemadiff.NewSchemaFromSQL(schemadiffEnv, dstSchemaStr)
+	if err != nil {
+		return nil, errors.New("diff fail:" + err.Error())
+	}
+
+	_, err = schema.Apply(diffRsult.UnorderedDiffs())
+	if err != nil {
+		return diffs, errors.Join(ErrDiffResultCheckFailed, err)
 	}
 	return diffs, nil
 }

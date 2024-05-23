@@ -19,6 +19,8 @@ type DbConf struct {
 type SchemaRes struct {
 	Table      string `gorm:"column:Table"`
 	CreateStmt string `gorm:"column:Create Table"`
+	View       string `gorm:"column:View"`
+	CreateView string `gorm:"column:Create View"`
 }
 
 // type Db struct {
@@ -53,18 +55,19 @@ func (db *Db) GetAllTables() ([]string, error) {
 }
 
 func (db *Db) GetTableSchema(tableName string) (string, error) {
-	migrator := db.Migrator()
-
-	if !migrator.HasTable(tableName) {
-		return "", ErrNoSuchTable
-	}
-
 	Schema := &SchemaRes{}
 	tx := db.Raw(fmt.Sprintf("show create table `%s`", tableName)).Scan(Schema)
 	if tx.Error != nil {
 		return "", tx.Error
 	}
-	return Schema.CreateStmt, nil
+	if Schema.Table != "" && Schema.CreateStmt != "" {
+		return Schema.CreateStmt, nil
+	}
+	if Schema.View != "" && Schema.CreateView != "" {
+		return Schema.CreateView, nil
+	}
+
+	return "", ErrNoSuchTable
 }
 
 func (db *Db) GetMysqlVersion() (string, error) {

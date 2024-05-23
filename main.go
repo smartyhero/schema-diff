@@ -2,6 +2,7 @@ package main
 
 import (
 	"debug/buildinfo"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -104,13 +105,22 @@ func main() {
 	for _, tableName := range config.SkipTables {
 		log.Printf("表[%s]被跳过\n", tableName)
 		delete(srcSchemas, tableName)
+		delete(dstSchemas, tableName)
 	}
 
 	diffUseMysqlVersion := config.GetDiffUseVersion()
 	alterTableSql, err := diffsql.DiffSchemas(diffUseMysqlVersion, IgnoreCharset, srcSchemas, dstSchemas)
 	if err != nil {
-		log.Printf("比对失败: %+v\n", err)
-		os.Exit(1)
+		if errors.Is(err, diffsql.ErrDiffFailed) {
+			log.Printf("获取diff结果失败: %+v\n", err)
+			os.Exit(1)
+		} else if errors.Is(err, diffsql.ErrDiffResultCheckFailed) {
+			log.Printf("diff结果校验失败: %+v\n", err)
+			log.Println("diff结果已生成, 请进行人工确认")
+		} else {
+			log.Printf("未知错误: %+v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if len(alterTableSql) == 0 {
