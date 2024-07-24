@@ -74,6 +74,10 @@ func init() {
 		config.DstSchemaConf.SqlFile = dstSqlFile
 	}
 
+	if config.IgnoreCharset {
+		IgnoreCharset = true
+	}
+
 	if err := config.InitAndCheck(MysqlVersion, skipTables); err != nil {
 		log.Printf("初始化配置失败: %+v\n", err)
 		os.Exit(1)

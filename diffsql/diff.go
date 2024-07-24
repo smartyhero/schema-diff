@@ -48,7 +48,7 @@ func DiffSchemas(MysqlVersion string, IgnoreCharset bool, srcSchemas map[string]
 	diffHints := &schemadiff.DiffHints{
 		StrictIndexOrdering:         false,
 		AutoIncrementStrategy:       schemadiff.AutoIncrementIgnore,
-		TableCharsetCollateStrategy: schemadiff.TableCharsetCollateIgnoreAlways,
+		TableCharsetCollateStrategy: schemadiff.TableCharsetCollateStrict,
 	}
 	if IgnoreCharset {
 		diffHints.TableCharsetCollateStrategy = schemadiff.TableCharsetCollateIgnoreAlways
