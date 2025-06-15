@@ -3,7 +3,6 @@ package diffsql
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 
@@ -109,16 +108,11 @@ func GetTableSchemasFromFile(fileName string, mysqlVersion string) (map[string]s
 	if err != nil {
 		return nil, err
 	}
-	tokens := parser.NewStringTokenizer(string(sqlData))
-	for {
-		stmt, err := sqlparser.ParseNext(tokens)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Printf("解析sql出错: %+v\n", err)
-			continue
-		}
+	stmts, err := parser.ParseMultipleIgnoreEmpty(string(sqlData))
+	if err != nil {
+		return nil, err
+	}
+	for _, stmt := range stmts {
 		switch stmt := stmt.(type) {
 		case *sqlparser.CreateTable:
 			tableName := stmt.Table.Name.String()
