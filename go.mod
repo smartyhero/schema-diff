@@ -1,14 +1,12 @@
 module schema-diff
 
-go 1.24.2
-
-toolchain go1.24.4
+go 1.24.4
 
 require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
-	vitess.io/vitess v0.22.0
+	vitess.io/vitess v0.22.1
 )
 
 require (
