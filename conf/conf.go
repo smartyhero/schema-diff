@@ -2,13 +2,12 @@ package conf
 
 import (
 	"os"
-	"strings"
-
 	"schema-diff/db"
+	"strings"
 
 	vtconfig "vitess.io/vitess/go/mysql/config"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (

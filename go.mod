@@ -3,7 +3,7 @@ module schema-diff
 go 1.25.1
 
 require (
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.1
 	vitess.io/vitess v0.23.0
